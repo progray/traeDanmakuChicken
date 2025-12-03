@@ -9,6 +9,8 @@
 #include <boost/property_tree/ptree.hpp>
 using namespace boost::property_tree;
 #include <codecvt>
+#include <Shlwapi.h>
+#pragma comment(lib, "Shlwapi.lib")
 using namespace std;
 
 //#ifdef _DEBUG
@@ -40,6 +42,7 @@ BEGIN_MESSAGE_MAP(CDanmakuChickenDlg, CDialogEx)
 ON_WM_DESTROY()
 ON_BN_CLICKED(IDC_BUTTON2, &CDanmakuChickenDlg::OnBnClickedButton2)
 ON_WM_HSCROLL()
+ON_BN_CLICKED(IDC_BUTTON_OPEN_CONFIG, &CDanmakuChickenDlg::OnBnClickedButtonOpenConfig)
 END_MESSAGE_MAP()
 
 
@@ -90,6 +93,10 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	// 加载配置
+	LoadConfig();
+
+	// 设置滑块范围和初始值
 	m_danmakuSizeSlider.SetRange(20, 100);
 	m_danmakuSizeSlider.SetPos((int)m_overlayDlg.m_danmakuManager.m_danmakuSize);
 	m_danmakuSpeedSlider.SetRange(1, 100);
@@ -116,6 +123,9 @@ void CDanmakuChickenDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
 
+	// 保存配置
+	SaveConfig();
+
 	// 停止服务器
 	m_server.stop();
 	if (m_serverThread.joinable())
@@ -130,18 +140,26 @@ void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollB
 {
 	if (nSBCode == SB_THUMBTRACK)
 	{
+		ConfigManager::DanmakuConfig config = ConfigManager::GetInstance().GetConfig();
+		
 		switch (pScrollBar->GetDlgCtrlID())
 		{
 		case IDC_SLIDER1:
 			m_overlayDlg.m_danmakuManager.m_danmakuSize = (float)nPos;
+			config.fontSize = (float)nPos;
 			break;
 		case IDC_SLIDER2:
 			m_overlayDlg.m_danmakuManager.m_danmakuSpeed = nPos;
+			config.speed = nPos;
 			break;
 		case IDC_SLIDER3:
 			m_overlayDlg.m_danmakuManager.m_danmakuAlpha = nPos;
+			config.opacity = nPos;
 			break;
 		}
+		
+		// 更新配置
+		ConfigManager::GetInstance().SetConfig(config);
 	}
 
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
@@ -151,6 +169,49 @@ void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollB
 void CDanmakuChickenDlg::OnBnClickedButton2()
 {
 	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("我能吞下玻璃而不伤身体"));
+}
+
+// 打开配置文件
+void CDanmakuChickenDlg::OnBnClickedButtonOpenConfig()
+{
+	wstring configPath = GetConfigFilePath();
+	if (PathFileExists(configPath.c_str()))
+	{
+		ShellExecute(NULL, L"open", configPath.c_str(), NULL, NULL, SW_SHOW);
+	}
+	else
+	{
+		AfxMessageBox(_T("配置文件不存在"));
+	}
+}
+
+// 加载配置
+void CDanmakuChickenDlg::LoadConfig()
+{
+	wstring configPath = GetConfigFilePath();
+	ConfigManager::GetInstance().LoadConfig(configPath);
+	
+	ConfigManager::DanmakuConfig config = ConfigManager::GetInstance().GetConfig();
+	m_overlayDlg.m_danmakuManager.m_danmakuSize = config.fontSize;
+	m_overlayDlg.m_danmakuManager.m_danmakuSpeed = config.speed;
+	m_overlayDlg.m_danmakuManager.m_danmakuAlpha = config.opacity;
+}
+
+// 保存配置
+void CDanmakuChickenDlg::SaveConfig()
+{
+	wstring configPath = GetConfigFilePath();
+	ConfigManager::GetInstance().SaveConfig(configPath);
+}
+
+// 获取配置文件路径
+std::wstring CDanmakuChickenDlg::GetConfigFilePath()
+{
+	TCHAR szPath[MAX_PATH];
+	GetModuleFileName(NULL, szPath, MAX_PATH);
+	PathRemoveFileSpec(szPath);
+	PathAppend(szPath, L"config\danmaku_config.ini");
+	return szPath;
 }
 
 // 处理添加弹幕请求
