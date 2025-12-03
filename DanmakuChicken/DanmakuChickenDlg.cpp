@@ -1,5 +1,5 @@
-﻿
-// DanmakuChickenDlg.cpp : 实现文件
+
+// DanmakuChickenDlg.cpp : ʵ���ļ�
 //
 
 #include "stdafx.h"
@@ -16,7 +16,7 @@ using namespace std;
 //#endif
 
 
-// CDanmakuChickenDlg 对话框
+// CDanmakuChickenDlg �Ի���
 
 
 
@@ -39,25 +39,26 @@ BEGIN_MESSAGE_MAP(CDanmakuChickenDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 ON_WM_DESTROY()
 ON_BN_CLICKED(IDC_BUTTON2, &CDanmakuChickenDlg::OnBnClickedButton2)
+ON_BN_CLICKED(IDC_BUTTON1, &CDanmakuChickenDlg::OnBnClickedButtonOpenConfig)
 ON_WM_HSCROLL()
 END_MESSAGE_MAP()
 
 
-// CDanmakuChickenDlg 消息处理程序
+// CDanmakuChickenDlg ��Ϣ��������
 
-// 如果向对话框添加最小化按钮，则需要下面的代码
-//  来绘制该图标。  对于使用文档/视图模型的 MFC 应用程序，
-//  这将由框架自动完成。
+// �����Ի���������С����ť������Ҫ����Ĵ���
+//  �����Ƹ�ͼ�ꡣ  ����ʹ���ĵ�/��ͼģ�͵� MFC Ӧ�ó���
+//  �⽫�ɿ���Զ���ɡ�
 
 void CDanmakuChickenDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // 用于绘制的设备上下文
+		CPaintDC dc(this); // ���ڻ��Ƶ��豸������
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// 使图标在工作区矩形中居中
+		// ʹͼ���ڹ����������о���
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -65,7 +66,7 @@ void CDanmakuChickenDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// 绘制图标
+		// ����ͼ��
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -74,8 +75,8 @@ void CDanmakuChickenDlg::OnPaint()
 	}
 }
 
-//当用户拖动最小化窗口时系统调用此函数取得光标
-//显示。
+//���û��϶���С������ʱϵͳ���ô˺���ȡ�ù��
+//��ʾ��
 HCURSOR CDanmakuChickenDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
@@ -85,22 +86,27 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
-	//  执行此操作
-	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
+	// ���ô˶Ի����ͼ�ꡣ  ��Ӧ�ó��������ڲ��ǶԻ���ʱ����ܽ��Զ�
+	//  ִ�д˲���
+	SetIcon(m_hIcon, TRUE);			// ���ô�ͼ��
+	SetIcon(m_hIcon, FALSE);		// ����Сͼ��
 
 	m_danmakuSizeSlider.SetRange(20, 100);
-	m_danmakuSizeSlider.SetPos((int)m_overlayDlg.m_danmakuManager.m_danmakuSize);
 	m_danmakuSpeedSlider.SetRange(1, 100);
-	m_danmakuSpeedSlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuSpeed);
 	m_danmakuOpacitySlider.SetRange(255 * 10 / 100, 255);
+	
+	// ��������
+	LoadConfig();
+	
+	// ���»���λ��
+	m_danmakuSizeSlider.SetPos((int)m_overlayDlg.m_danmakuManager.m_danmakuSize);
+	m_danmakuSpeedSlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuSpeed);
 	m_danmakuOpacitySlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuAlpha);
 
-	// 载入弹幕窗口
+	// ���뵯Ļ����
 	m_overlayDlg.Create(m_overlayDlg.IDD, GetDesktopWindow());
 
-	// 启动服务器
+	// ����������
 	m_serverThread = thread([this] {
 		m_server.config.address = "127.0.0.1";
 		m_server.config.port = 12450;
@@ -109,37 +115,43 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 		m_server.start();
 	});
 
-	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
+	return TRUE;  // ���ǽ��������õ��ؼ������򷵻� TRUE
 }
 
 void CDanmakuChickenDlg::OnDestroy()
 {
+	// ��������
+	SaveConfig();
+	
 	CDialogEx::OnDestroy();
 
-	// 停止服务器
+	// ֹͣ������
 	m_server.stop();
 	if (m_serverThread.joinable())
 		m_serverThread.join();
 
-	// 关闭弹幕窗口
+	// �رյ�Ļ����
 	m_overlayDlg.DestroyWindow();
 }
 
-// 修改弹幕设置
+// �޸ĵ�Ļ����
 void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
-	if (nSBCode == SB_THUMBTRACK)
+	if (nSBCode == SB_THUMBTRACK || nSBCode == SB_ENDSCROLL)
 	{
 		switch (pScrollBar->GetDlgCtrlID())
 		{
 		case IDC_SLIDER1:
 			m_overlayDlg.m_danmakuManager.m_danmakuSize = (float)nPos;
+			SaveConfig();
 			break;
 		case IDC_SLIDER2:
 			m_overlayDlg.m_danmakuManager.m_danmakuSpeed = nPos;
+			SaveConfig();
 			break;
 		case IDC_SLIDER3:
 			m_overlayDlg.m_danmakuManager.m_danmakuAlpha = nPos;
+			SaveConfig();
 			break;
 		}
 	}
@@ -147,13 +159,13 @@ void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollB
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 }
 
-// 测试弹幕
+// ���Ե�Ļ
 void CDanmakuChickenDlg::OnBnClickedButton2()
 {
-	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("我能吞下玻璃而不伤身体"));
+	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("�������²�������������"));
 }
 
-// 处理添加弹幕请求
+// �������ӵ�Ļ����
 void CDanmakuChickenDlg::HandleAddDanmaku(shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request)
 {
 	try
@@ -172,9 +184,152 @@ void CDanmakuChickenDlg::HandleAddDanmaku(shared_ptr<HttpServer::Response> respo
 	catch(exception& e)
 	{
 		stringstream stream;
-		stream << R"({ "error": ")" << e.what() << R"(" })";
+		stream << "{ \"error\": \"" << e.what() << "\" }";
+		//stream << R"({ "error": ")" << e.what() << R"(" })";
 		string content = stream.str();
 		*response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << content.size() << "\r\n\r\n"
 			<< content;
+	}
+}
+
+// ��ȡ�����ļ�·��
+CString CDanmakuChickenDlg::GetConfigFilePath()
+{
+	TCHAR szPath[MAX_PATH] = {0};
+	GetModuleFileName(NULL, szPath, MAX_PATH);
+	CString strPath(szPath);
+	int nPos = strPath.ReverseFind(_T('\\'));
+	if (nPos != -1)
+	{
+		strPath = strPath.Left(nPos + 1);
+	}
+	strPath += _T("danmaku_config.json");
+	return strPath;
+}
+
+// 记录配置操作日志
+void CDanmakuChickenDlg::LogConfigOperation(const CString& operation, bool success, const CString& errorMsg)
+{
+	CString strLog;
+	CTime timeNow = CTime::GetCurrentTime();
+	strLog.Format(_T("[%s] %s %s"), timeNow.Format(_T("%Y-%m-%d %H:%M:%S")), operation, success ? _T("成功") : _T("失败"));
+	
+	if (!success && !errorMsg.IsEmpty())
+	{
+		strLog += _T(": ") + errorMsg;
+	}
+	
+	strLog += _T("\r\n");
+	
+	// 写入日志文件为UTF-8格式
+	CString strLogPath = GetConfigFilePath();
+	strLogPath.Replace(_T("danmaku_config.json"), _T("danmaku_log.txt"));
+	
+	bool bIsNewFile = !PathFileExists(strLogPath);
+	CStdioFile file;
+	if (file.Open(strLogPath, CFile::modeCreate | CFile::modeWrite | CFile::modeNoTruncate | CFile::typeText | CFile::shareDenyWrite))
+	{
+		file.SeekToEnd();
+		
+		// 如果是新文件，写入UTF-8 BOM
+		if (bIsNewFile)
+		{
+			BYTE utf8Bom[] = {0xEF, 0xBB, 0xBF};
+			file.Write(utf8Bom, sizeof(utf8Bom));
+		}
+		
+		// 将CString转换为UTF-8写入
+		file.WriteString(strLog);
+		file.Close();
+	}
+}
+
+// ��������
+void CDanmakuChickenDlg::LoadConfig()
+{
+	CString strConfigPath = GetConfigFilePath();
+	
+	try
+	{
+		if (PathFileExists(strConfigPath))
+{
+	ptree pt;
+	std::string configPathStr = CT2A(strConfigPath.GetString());
+	read_json(configPathStr, pt);
+			
+			// ��ȡ���ã�ʹ��Ĭ��ֵ��Ϊ��
+			m_overlayDlg.m_danmakuManager.m_danmakuSize = pt.get<float>("danmaku_size", 40.0F);
+			m_overlayDlg.m_danmakuManager.m_danmakuSpeed = pt.get<int>("danmaku_speed", 4);
+			m_overlayDlg.m_danmakuManager.m_danmakuAlpha = pt.get<int>("danmaku_alpha", 255 * 80 / 100);
+			
+			// ȷ������ֵ����Ч��Χ��
+			m_overlayDlg.m_danmakuManager.m_danmakuSize = max(20.0F, min(100.0F, m_overlayDlg.m_danmakuManager.m_danmakuSize));
+			m_overlayDlg.m_danmakuManager.m_danmakuSpeed = max(1, min(100, m_overlayDlg.m_danmakuManager.m_danmakuSpeed));
+			m_overlayDlg.m_danmakuManager.m_danmakuAlpha = max(255 * 10 / 100, min(255, m_overlayDlg.m_danmakuManager.m_danmakuAlpha));
+			
+			LogConfigOperation(_T("��������"), true);
+		}
+		else
+		{
+			// ʹ��Ĭ�����ò�����
+			SaveConfig();
+			LogConfigOperation(_T("配置文件不存在，创建默认配置"), true);
+		}
+	}
+	catch(exception& e)
+	{
+		CString strError;
+		CString errorMsg = CA2T(e.what());
+		strError.Format(_T("加载配置文件失败: %s"), errorMsg.GetString());
+		LogConfigOperation(_T("加载配置"), false, strError);
+		
+		// �ָ�Ĭ������
+		m_overlayDlg.m_danmakuManager.m_danmakuSize = 40.0F;
+		m_overlayDlg.m_danmakuManager.m_danmakuSpeed = 4;
+		m_overlayDlg.m_danmakuManager.m_danmakuAlpha = 255 * 80 / 100;
+	}
+}
+
+// ��������
+void CDanmakuChickenDlg::SaveConfig()
+{
+	CString strConfigPath = GetConfigFilePath();
+	
+	try
+	{
+		ptree pt;
+		pt.put("danmaku_size", m_overlayDlg.m_danmakuManager.m_danmakuSize);
+		pt.put("danmaku_speed", m_overlayDlg.m_danmakuManager.m_danmakuSpeed);
+		pt.put("danmaku_alpha", m_overlayDlg.m_danmakuManager.m_danmakuAlpha);
+		
+		std::string configPathStr = CT2A(strConfigPath.GetString());
+	write_json(configPathStr, pt);
+	LogConfigOperation(_T("保存配置"), true);
+}
+catch(exception& e)
+{
+	CString strError;
+	CString errorMsg = CA2T(e.what());
+	strError.Format(_T("保存配置失败: %s"), errorMsg.GetString());
+		LogConfigOperation(_T("保存配置"), false, strError);
+	}
+}
+
+// �������ļ�
+void CDanmakuChickenDlg::OnBnClickedButtonOpenConfig()
+{
+	CString strConfigPath = GetConfigFilePath();
+	
+	if (PathFileExists(strConfigPath))
+	{
+		ShellExecute(NULL, _T("open"), strConfigPath, NULL, NULL, SW_SHOWNORMAL);
+		LogConfigOperation(_T("�������ļ�"), true);
+	}
+	else
+	{
+		// ����Ĭ������
+		SaveConfig();
+		ShellExecute(NULL, _T("open"), strConfigPath, NULL, NULL, SW_SHOWNORMAL);
+		LogConfigOperation(_T("�������������ļ�"), true);
 	}
 }

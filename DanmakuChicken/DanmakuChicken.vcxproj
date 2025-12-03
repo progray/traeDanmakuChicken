@@ -113,7 +113,9 @@
   <ItemGroup>
     <ClCompile Include="Danmaku.cpp" />
     <ClCompile Include="DanmakuChicken.cpp" />
-    <ClCompile Include="DanmakuChickenDlg.cpp" />
+    <ClCompile Include="DanmakuChickenDlg.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="OverlayDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
