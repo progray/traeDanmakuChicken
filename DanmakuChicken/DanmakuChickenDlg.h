@@ -1,4 +1,4 @@
-﻿
+
 // DanmakuChickenDlg.h : 头文件
 //
 
@@ -41,12 +41,13 @@ public:
 	afx_msg void OnDestroy();
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedOpenConfigFile();
 
 	// 处理添加弹幕请求
 	void HandleAddDanmaku(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 
 
-	COverlayDlg m_overlayDlg;
+	COverlayDlg* m_overlayDlg;
 	HttpServer m_server;
 	std::thread m_serverThread;
 

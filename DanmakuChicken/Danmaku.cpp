@@ -1,7 +1,14 @@
-﻿#include "stdafx.h"
-#include "Danmaku.h"
-using namespace std;
-using namespace Gdiplus;
+#include "stdafx.h" 
+#include "Danmaku.h" 
+#include <Afx.h> 
+#include <fstream> 
+#include <ShlObj.h> 
+#include <Shlwapi.h> 
+#pragma comment(lib, "Shlwapi.lib") 
+#include <sstream> 
+#include <Windows.h> 
+using namespace std; 
+using namespace Gdiplus; 
 
 
 Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size)
@@ -55,11 +62,134 @@ DanmakuManager::DanmakuManager() :
 	});
 }
 
-DanmakuManager::~DanmakuManager()
-{
-	m_stopThreads = TRUE;
-	if (m_updateThread.joinable())
-		m_updateThread.join();
+DanmakuManager::~DanmakuManager() 
+{ 
+	m_stopThreads = TRUE; 
+	if (m_updateThread.joinable()) 
+		m_updateThread.join(); 
+} 
+
+// 获取配置文件路径 
+CString DanmakuManager::GetConfigFilePath() 
+{ 
+	TCHAR szPath[MAX_PATH]; 
+	if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath))) 
+	{ 
+		CString strPath(szPath); 
+		strPath += _T("\\DanmakuChicken"); 
+		CreateDirectory(strPath, NULL); 
+		strPath += _T("\\config.ini"); 
+		return strPath; 
+	} 
+	return _T("config.ini"); 
+} 
+
+// 获取日志文件路径 
+CString DanmakuManager::GetLogFilePath() 
+{ 
+	TCHAR szPath[MAX_PATH]; 
+	if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath))) 
+	{ 
+		CString strPath(szPath); 
+		strPath += _T("\\DanmakuChicken"); 
+		CreateDirectory(strPath, NULL); 
+		strPath += _T("\\danmaku.log"); 
+		return strPath; 
+	} 
+	return _T("danmaku.log"); 
+} 
+
+// 写入日志（CString版本） 
+void DanmakuManager::WriteLog(const CString& strLog) 
+{ 
+	try 
+	{ 
+		CString strFilePath = GetLogFilePath(); 
+		CTime currentTime = CTime::GetCurrentTime(); 
+		CString strTime = currentTime.Format(_T("%Y-%m-%d %H:%M:%S")); 
+		
+		CStdioFile file; 
+		if (file.Open(strFilePath, CFile::modeCreate | CFile::modeWrite | CFile::modeNoTruncate | CFile::shareDenyNone)) 
+		{ 
+			file.SeekToEnd(); 
+			file.WriteString(strTime + _T(" ") + strLog + _T("\n")); 
+			file.Close(); 
+		} 
+	} 
+	catch (const CFileException& e) 
+	{ 
+		CString strError; 
+		strError.Format(_T("日志写入失败: %d"), e.m_cause); 
+		OutputDebugString(strError + _T("\n")); 
+	} 
+	catch (const exception& e) 
+	{ 
+		stringstream ss; 
+		ss << "日志写入失败: " << e.what() << endl; 
+		OutputDebugStringA(ss.str().c_str()); 
+	} 
+} 
+
+
+
+// 加载配置文件 
+BOOL DanmakuManager::LoadConfig() 
+{ 
+	try 
+	{ 
+		CString strFilePath = GetConfigFilePath(); 
+		
+		// 读取配置参数 
+		m_danmakuSize = (REAL)GetPrivateProfileInt(_T("Danmaku"), _T("Size"), 40, strFilePath); 
+		m_danmakuSpeed = GetPrivateProfileInt(_T("Danmaku"), _T("Speed"), 4, strFilePath); 
+		m_danmakuAlpha = GetPrivateProfileInt(_T("Danmaku"), _T("Alpha"), 255 * 80 / 100, strFilePath); 
+		
+		CString strLog = _T("配置文件加载成功"); 
+		WriteLog(strLog); 
+		OutputDebugString(strLog + _T("\n")); 
+		return TRUE; 
+	} 
+	catch (const exception& e) 
+	{ 
+		stringstream ss; 
+		ss << "配置文件加载失败: " << e.what() << endl; 
+		WriteLog(CString(ss.str().c_str())); 
+		OutputDebugStringA(ss.str().c_str()); 
+		return FALSE; 
+	} 
+} 
+
+// 保存配置文件 
+BOOL DanmakuManager::SaveConfig() 
+{ 
+	try 
+	{ 
+		CString strFilePath = GetConfigFilePath(); 
+		CString strValue; 
+		
+		// 保存配置参数 
+		strValue.Format(_T("%f"), m_danmakuSize); 
+		WritePrivateProfileString(_T("Danmaku"), _T("Size"), strValue, strFilePath); 
+		
+		strValue.Format(_T("%d"), m_danmakuSpeed); 
+		WritePrivateProfileString(_T("Danmaku"), _T("Speed"), strValue, strFilePath); 
+		
+		strValue.Format(_T("%d"), m_danmakuAlpha); 
+		WritePrivateProfileString(_T("Danmaku"), _T("Alpha"), strValue, strFilePath); 
+		
+		CString strLog = _T("配置文件保存成功"); 
+		WriteLog(strLog); 
+		OutputDebugString(strLog + _T("\n")); 
+		return TRUE; 
+	} 
+	catch (const exception& e) 
+	{ 
+		stringstream ss; 
+		ss << "配置文件保存失败: " << e.what() << endl; 
+		WriteLog(CString(ss.str().c_str())); 
+		OutputDebugStringA(ss.str().c_str()); 
+		return FALSE; 
+	} 
 }
 
 // 添加新弹幕
