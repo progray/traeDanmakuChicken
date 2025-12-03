@@ -1,15 +1,17 @@
-﻿
+
 // DanmakuChickenDlg.cpp : 实现文件
 //
-
-#include "stdafx.h"
-#include "DanmakuChicken.h"
-#include "DanmakuChickenDlg.h"
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-using namespace boost::property_tree;
-#include <codecvt>
-using namespace std;
+#include "stdafx.h" 
+#include "DanmakuChicken.h" 
+#include "DanmakuChickenDlg.h" 
+#include "../include/json.hpp" 
+#include <codecvt> 
+#include <ShellAPI.h> 
+#include <Shlwapi.h> 
+#include <sstream> 
+#pragma comment(lib, "Shlwapi.lib") 
+using namespace std; 
+using json = nlohmann::json;
 
 //#ifdef _DEBUG
 //#define new DEBUG_NEW
@@ -24,6 +26,7 @@ CDanmakuChickenDlg::CDanmakuChickenDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CDanmakuChickenDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_overlayDlg = new COverlayDlg();
 }
 
 void CDanmakuChickenDlg::DoDataExchange(CDataExchange* pDX)
@@ -37,9 +40,10 @@ void CDanmakuChickenDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CDanmakuChickenDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-ON_WM_DESTROY()
-ON_BN_CLICKED(IDC_BUTTON2, &CDanmakuChickenDlg::OnBnClickedButton2)
-ON_WM_HSCROLL()
+	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BUTTON2, &CDanmakuChickenDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON_OPEN_CONFIG, &CDanmakuChickenDlg::OnBnClickedOpenConfigFile)
+	ON_WM_HSCROLL()
 END_MESSAGE_MAP()
 
 
@@ -81,76 +85,102 @@ HCURSOR CDanmakuChickenDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-BOOL CDanmakuChickenDlg::OnInitDialog()
+BOOL CDanmakuChickenDlg::OnInitDialog() 
 {
-	CDialogEx::OnInitDialog();
+	CDialogEx::OnInitDialog(); 
 
-	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
-	//  执行此操作
-	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
+	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动 
+	//  执行此操作 
+	SetIcon(m_hIcon, TRUE);		// 设置大图标 
+	SetIcon(m_hIcon, FALSE);	// 设置小图标 
 
-	m_danmakuSizeSlider.SetRange(20, 100);
-	m_danmakuSizeSlider.SetPos((int)m_overlayDlg.m_danmakuManager.m_danmakuSize);
-	m_danmakuSpeedSlider.SetRange(1, 100);
-	m_danmakuSpeedSlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuSpeed);
-	m_danmakuOpacitySlider.SetRange(255 * 10 / 100, 255);
-	m_danmakuOpacitySlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuAlpha);
+	// 加载配置文件 
+	m_overlayDlg->m_danmakuManager.LoadConfig(); 
 
-	// 载入弹幕窗口
-	m_overlayDlg.Create(m_overlayDlg.IDD, GetDesktopWindow());
+	m_danmakuSizeSlider.SetRange(20, 100); 
+	m_danmakuSizeSlider.SetPos((int)m_overlayDlg->m_danmakuManager.m_danmakuSize); 
+	m_danmakuSpeedSlider.SetRange(1, 100); 
+	m_danmakuSpeedSlider.SetPos(m_overlayDlg->m_danmakuManager.m_danmakuSpeed); 
+	m_danmakuOpacitySlider.SetRange(255 * 10 / 100, 255); 
+	m_danmakuOpacitySlider.SetPos(m_overlayDlg->m_danmakuManager.m_danmakuAlpha); 
 
-	// 启动服务器
-	m_serverThread = thread([this] {
-		m_server.config.address = "127.0.0.1";
-		m_server.config.port = 12450;
+	// 载入弹幕窗口 
+	m_overlayDlg->Create(m_overlayDlg->IDD, GetDesktopWindow()); 
+
+	// 启动服务器 
+	m_serverThread = thread([this] { 
+		m_server.config.address = "127.0.0.1"; 
+		m_server.config.port = 12450; 
 		m_server.resource["^/danmaku"]["POST"] = bind(&CDanmakuChickenDlg::HandleAddDanmaku, 
-			this, placeholders::_1, placeholders::_2);
-		m_server.start();
-	});
+			this, placeholders::_1, placeholders::_2); 
+		m_server.start(); 
+	}); 
 
-	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
+	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE 
 }
 
-void CDanmakuChickenDlg::OnDestroy()
+void CDanmakuChickenDlg::OnDestroy() 
 {
-	CDialogEx::OnDestroy();
+	CDialogEx::OnDestroy(); 
 
-	// 停止服务器
-	m_server.stop();
-	if (m_serverThread.joinable())
-		m_serverThread.join();
+	// 保存配置文件 
+	m_overlayDlg->m_danmakuManager.SaveConfig(); 
 
-	// 关闭弹幕窗口
-	m_overlayDlg.DestroyWindow();
+	// 停止服务器 
+	m_server.stop(); 
+	if (m_serverThread.joinable()) 
+		m_serverThread.join(); 
+
+	// 关闭弹幕窗口 
+	m_overlayDlg->DestroyWindow(); 
+	delete m_overlayDlg;
+	m_overlayDlg = NULL;
 }
 
-// 修改弹幕设置
-void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+// 修改弹幕设置 
+void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar) 
 {
-	if (nSBCode == SB_THUMBTRACK)
+	if (nSBCode == SB_THUMBTRACK) 
 	{
-		switch (pScrollBar->GetDlgCtrlID())
+		switch (pScrollBar->GetDlgCtrlID()) 
 		{
-		case IDC_SLIDER1:
-			m_overlayDlg.m_danmakuManager.m_danmakuSize = (float)nPos;
-			break;
-		case IDC_SLIDER2:
-			m_overlayDlg.m_danmakuManager.m_danmakuSpeed = nPos;
-			break;
-		case IDC_SLIDER3:
-			m_overlayDlg.m_danmakuManager.m_danmakuAlpha = nPos;
-			break;
+		case IDC_SLIDER1: 
+			m_overlayDlg->m_danmakuManager.m_danmakuSize = (float)nPos; 
+			break; 
+		case IDC_SLIDER2: 
+			m_overlayDlg->m_danmakuManager.m_danmakuSpeed = nPos; 
+			break; 
+		case IDC_SLIDER3: 
+			m_overlayDlg->m_danmakuManager.m_danmakuAlpha = nPos; 
+			break; 
 		}
+		
+		// 弹幕设置修改时，保存到配置文件 
+		m_overlayDlg->m_danmakuManager.SaveConfig(); 
 	}
 
-	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
+	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar); 
 }
 
 // 测试弹幕
 void CDanmakuChickenDlg::OnBnClickedButton2()
 {
-	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("我能吞下玻璃而不伤身体"));
+	m_overlayDlg->m_danmakuManager.AddDanmaku(_T("测试弹幕"));
+}
+
+// 打开配置文件
+void CDanmakuChickenDlg::OnBnClickedOpenConfigFile()
+{
+	CString strConfigPath = m_overlayDlg->m_danmakuManager.GetConfigFilePath();
+	
+	// 检查配置文件是否存在，如果不存在则创建
+	if (!PathFileExists(strConfigPath))
+	{
+		m_overlayDlg->m_danmakuManager.SaveConfig();
+	}
+	
+	// 使用默认程序打开配置文件
+	ShellExecute(NULL, _T("open"), strConfigPath, NULL, NULL, SW_SHOW);
 }
 
 // 处理添加弹幕请求
@@ -158,14 +188,17 @@ void CDanmakuChickenDlg::HandleAddDanmaku(shared_ptr<HttpServer::Response> respo
 {
 	try
 	{
-		ptree pt;
-		read_json(request->content, pt);
+		// 使用nlohmann/json库解析JSON数据
+		string content = request->content.string();
+		json j = json::parse(content);
+		string contentA = j["content"];
 
-		string contentA = pt.get<string>("content");
+
+		// 转换为宽字符
 		wstring_convert<codecvt<wchar_t, char, mbstate_t> > cv(new codecvt_utf8_utf16<wchar_t>);
 		wstring contentW = cv.from_bytes(contentA);
 
-		m_overlayDlg.m_danmakuManager.AddDanmaku(contentW.c_str());
+		m_overlayDlg->m_danmakuManager.AddDanmaku(contentW.c_str());
 
 		*response << "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
 	}

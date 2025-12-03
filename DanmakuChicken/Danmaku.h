@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 #include <memory>
 #include <vector>
 #include <mutex>
 #include <thread>
+#include <string>
 
 
 class Danmaku final
@@ -61,4 +62,16 @@ public:
 	virtual void UpdateDanmaku();
 	// 渲染m_danmakuSet到hdc
 	virtual void RenderDanmakuSet(HDC hdc);
+	
+	// 配置文件相关
+	BOOL LoadConfig();
+	BOOL SaveConfig();
+	
+	// 日志功能
+	void WriteLog(const CString& strLog);
+
+public:
+	CString GetConfigFilePath();
+private:
+	CString GetLogFilePath();
 };
