@@ -15,7 +15,7 @@ public:
 	CImage m_img;
 
 protected:
-	Danmaku(const CString& content, const Gdiplus::FontFamily* font, REAL size);
+	Danmaku(const CString& content, const Gdiplus::FontFamily* font, REAL size, const Gdiplus::Color& textColor, BOOL strokeEnabled, const Gdiplus::Color& strokeColor, REAL strokeWidth);
 public:
 	Danmaku(const Danmaku& other) = delete;
 	Danmaku(Danmaku&& other);
@@ -33,6 +33,8 @@ public:
 	// 包含所有弹幕的矩形大小
 	Size m_danmakuBoxSize = { 800, 600 };
 
+	// 弹幕字体名称
+	CString m_danmakuFontName;
 	// 弹幕字体
 	std::unique_ptr<Gdiplus::FontFamily> m_danmakuFont;
 	// 弹幕字体大小
@@ -41,6 +43,14 @@ public:
 	int m_danmakuSpeed = 4;
 	// 弹幕不透明度
 	int m_danmakuAlpha = 255 * 80 / 100;
+	// 文字颜色
+	Gdiplus::Color m_textColor;
+	// 描边开关
+	BOOL m_strokeEnabled;
+	// 描边颜色
+	Gdiplus::Color m_strokeColor;
+	// 描边宽度
+	REAL m_strokeWidth;
 
 	// 更新弹幕线程
 	std::thread m_updateThread;

@@ -1,28 +1,31 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Danmaku.h"
 using namespace std;
 using namespace Gdiplus;
 
 
-Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size)
+Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size, const Gdiplus::Color& textColor, BOOL strokeEnabled, const Gdiplus::Color& strokeColor, REAL strokeWidth)
 {
 	m_content = content;
 
 	GraphicsPath path;
 	path.AddString(m_content, -1, font, FontStyle::FontStyleBold, size, Point(0, 0), StringFormat::GenericDefault());
 
-	Pen blackPen(Color::Black, 1.5F);
+	Pen strokePen(strokeColor, strokeWidth);
 	Rect rect;
-	path.GetBounds(&rect, NULL, &blackPen);
+	path.GetBounds(&rect, NULL, &strokePen);
 	m_size.Width = rect.Width;
 	m_size.Height = rect.Height;
 
 	m_img.Create(m_size.Width, m_size.Height, 32, CImage::createAlphaChannel);
 	Graphics graph(m_img.GetDC());
 	graph.SetSmoothingMode(SmoothingMode::SmoothingModeAntiAlias);
-	SolidBrush whiteBrush(Color::White);
-	graph.FillPath(&whiteBrush, &path);
-	graph.DrawPath(&blackPen, &path);
+	SolidBrush textBrush(textColor);
+	graph.FillPath(&textBrush, &path);
+	if (strokeEnabled)
+	{
+		graph.DrawPath(&strokePen, &path);
+	}
 	m_img.ReleaseDC();
 }
 
@@ -43,7 +46,12 @@ Danmaku& Danmaku::operator= (Danmaku&& other)
 
 
 DanmakuManager::DanmakuManager() :
-	m_danmakuFont(make_unique<FontFamily>(L"黑体"))
+	m_danmakuFontName(L"黑体"),
+	m_danmakuFont(make_unique<FontFamily>(L"黑体")),
+	m_textColor(Color::White),
+	m_strokeEnabled(TRUE),
+	m_strokeColor(Color::Black),
+	m_strokeWidth(1.5F)
 {
 	// 更新弹幕线程
 	m_updateThread = thread([this] {
@@ -65,7 +73,7 @@ DanmakuManager::~DanmakuManager()
 // 添加新弹幕
 void DanmakuManager::AddDanmaku(const CString& content)
 {
-	Danmaku danmaku(content, m_danmakuFont.get(), m_danmakuSize);
+	Danmaku danmaku(content, m_danmakuFont.get(), m_danmakuSize, m_textColor, m_strokeEnabled, m_strokeColor, m_strokeWidth);
 	danmaku.m_pos.X = m_danmakuBoxSize.Width;
 	danmaku.m_pos.Y = 0;
 
