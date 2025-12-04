@@ -97,6 +97,29 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 	m_danmakuOpacitySlider.SetRange(255 * 10 / 100, 255);
 	m_danmakuOpacitySlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuAlpha);
 
+	// 初始化标签页控件
+	m_generalDlg.Create(IDD_GENERAL_DIALOG, &m_tabControl);
+	m_styleDlg.Create(IDD_STYLE_DIALOG, &m_tabControl);
+
+	// 添加标签页
+	m_tabControl.InsertItem(0, _T("常规"));
+	m_tabControl.InsertItem(1, _T("样式"));
+
+	// 设置标签页大小
+	CRect tabRect;
+	m_tabControl.GetClientRect(&tabRect);
+	tabRect.top += 25;
+	tabRect.bottom -= 5;
+	tabRect.left += 5;
+	tabRect.right -= 5;
+
+	m_generalDlg.MoveWindow(&tabRect);
+	m_styleDlg.MoveWindow(&tabRect);
+
+	// 显示第一个标签页
+	m_generalDlg.ShowWindow(SW_SHOW);
+	m_styleDlg.ShowWindow(SW_HIDE);
+
 	// 载入弹幕窗口
 	m_overlayDlg.Create(m_overlayDlg.IDD, GetDesktopWindow());
 
