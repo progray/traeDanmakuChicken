@@ -49,7 +49,23 @@ public:
 
 	// 加载配置
 	void LoadConfig();
-
+	
+	// 保存配置
+	void SaveConfig();
+	
+	// 获取配置文件路径
+	std::wstring GetConfigFilePath();
+	
+	// 成员变量
+	COverlayDlg m_overlayDlg;
+	HttpServer m_server;
+	std::thread m_serverThread;
+	
+	// 滑块控件
+	CSliderCtrl m_danmakuSizeSlider;
+	CSliderCtrl m_danmakuSpeedSlider;
+	CSliderCtrl m_danmakuOpacitySlider;
+  
 	// 保存配置
 	void SaveConfig();
 

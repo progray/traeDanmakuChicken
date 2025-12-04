@@ -91,7 +91,7 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
+	SetIcon(m_hIcon, FALSE);			// 设置小图标
 
 	// 加载配置
 	LoadConfig();
@@ -108,13 +108,14 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 	m_overlayDlg.Create(m_overlayDlg.IDD, GetDesktopWindow());
 
 	// 启动服务器
-	m_serverThread = thread([this] {
+	m_serverThread = std::thread([this] {
 		m_server.config.address = "127.0.0.1";
 		m_server.config.port = 12450;
-		m_server.resource["^/danmaku"]["POST"] = bind(&CDanmakuChickenDlg::HandleAddDanmaku, 
-			this, placeholders::_1, placeholders::_2);
+		m_server.resource["^/danmaku"]["POST"] = std::bind(&CDanmakuChickenDlg::HandleAddDanmaku, 
+			this, std::placeholders::_1, std::placeholders::_2);
 		m_server.start();
 	});
+	m_serverThread.detach();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

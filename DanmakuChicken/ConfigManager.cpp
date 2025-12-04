@@ -90,7 +90,7 @@ void ConfigManager::Log(const std::string& message) const
     {
         wstring logPath = m_configPath;
         size_t pos = logPath.find_last_of(L"\\/");
-        if (pos != string::npos)
+        if (pos != wstring::npos)
         {
             logPath = logPath.substr(0, pos) + L"\\config.log";
         }
@@ -99,14 +99,11 @@ void ConfigManager::Log(const std::string& message) const
             logPath = L"config.log";
         }
 
-        // 转换为宽字符
-        wstring_convert<codecvt_utf8_utf16<wchar_t>> conv;
-        wstring wmessage = conv.from_bytes(message);
-
         // 打开日志文件（追加模式）
+        string logPathNarrow;
         wstring_convert<codecvt_utf8_utf16<wchar_t>> conv;
-        string logPathNarrow = conv.to_bytes(logPath);
-        wofstream logFile(logPathNarrow, ios::app);
+        logPathNarrow = conv.to_bytes(logPath);
+        ofstream logFile(logPathNarrow.c_str(), ios::app);
         if (logFile.is_open())
         {
             // 获取当前时间
@@ -115,11 +112,11 @@ void ConfigManager::Log(const std::string& message) const
             localtime_s(&localTime, &now);
 
             // 格式化时间
-            wchar_t timeBuf[64] = {0};
-            wcsftime(timeBuf, 64, L"%Y-%m-%d %H:%M:%S", &localTime);
+            char timeBuf[64] = {0};
+            strftime(timeBuf, 64, "%Y-%m-%d %H:%M:%S", &localTime);
 
             // 写入日志
-            logFile << timeBuf << L" [ConfigManager] " << wmessage << endl;
+            logFile << timeBuf << " [ConfigManager] " << message << endl;
             logFile.close();
         }
     }
