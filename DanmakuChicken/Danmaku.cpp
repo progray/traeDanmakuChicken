@@ -1,28 +1,41 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Danmaku.h"
 using namespace std;
 using namespace Gdiplus;
 
 
-Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size)
+Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size, COLORREF textColor, BOOL strokeEnabled, COLORREF strokeColor)
 {
 	m_content = content;
 
 	GraphicsPath path;
-	path.AddString(m_content, -1, font, FontStyle::FontStyleBold, size, Point(0, 0), StringFormat::GenericDefault());
+	path.AddString(m_content, -1, font, FontStyle::FontStyleBold, size, PointF(0.0f, 0.0f), StringFormat::GenericDefault());
 
-	Pen blackPen(Color::Black, 1.5F);
-	Rect rect;
-	path.GetBounds(&rect, NULL, &blackPen);
+	Pen strokePen(Color(strokeColor), 1.5F);
+	RectF rect;
+	path.GetBounds(&rect, NULL, &strokePen);
 	m_size.Width = rect.Width;
 	m_size.Height = rect.Height;
 
-	m_img.Create(m_size.Width, m_size.Height, 32, CImage::createAlphaChannel);
+	m_img.Create(static_cast<int>(ceil(rect.Width)), static_cast<int>(ceil(rect.Height)), 32, CImage::createAlphaChannel);
 	Graphics graph(m_img.GetDC());
 	graph.SetSmoothingMode(SmoothingMode::SmoothingModeAntiAlias);
-	SolidBrush whiteBrush(Color::White);
-	graph.FillPath(&whiteBrush, &path);
-	graph.DrawPath(&blackPen, &path);
+	
+	// 设置文字颜色
+	Color gdiTextColor(GetRValue(textColor), GetGValue(textColor), GetBValue(textColor), 255);
+	SolidBrush textBrush(gdiTextColor);
+	
+	// 先绘制描边（如果开启）
+	if (strokeEnabled)
+	{
+		Color gdiStrokeColor(GetRValue(strokeColor), GetGValue(strokeColor), GetBValue(strokeColor), 255);
+		Pen strokePen(gdiStrokeColor, 1.5F);
+		graph.DrawPath(&strokePen, &path);
+	}
+	
+	// 再绘制文字
+	graph.FillPath(&textBrush, &path);
+	
 	m_img.ReleaseDC();
 }
 
@@ -65,7 +78,7 @@ DanmakuManager::~DanmakuManager()
 // 添加新弹幕
 void DanmakuManager::AddDanmaku(const CString& content)
 {
-	Danmaku danmaku(content, m_danmakuFont.get(), m_danmakuSize);
+	Danmaku danmaku(content, m_danmakuFont.get(), m_danmakuSize, m_textColor, m_strokeEnabled, m_strokeColor);
 	danmaku.m_pos.X = m_danmakuBoxSize.Width;
 	danmaku.m_pos.Y = 0;
 
@@ -86,10 +99,10 @@ void DanmakuManager::AddDanmaku(const CString& content)
 				break;
 			}
 		}
-	} while (hasCollision && danmaku.m_pos.Y + danmaku.m_size.Height <= m_danmakuBoxSize.Height);
+	} while (hasCollision && danmaku.m_pos.Y + danmaku.m_size.Height < m_danmakuBoxSize.Height);
 
 	lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
-	m_danmakuSet.push_back(move(danmaku));
+	m_danmakuSet.push_back(danmaku);
 }
 
 // 更新弹幕位置

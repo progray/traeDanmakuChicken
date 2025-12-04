@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <memory>
 #include <vector>
 #include <mutex>
@@ -15,7 +15,7 @@ public:
 	CImage m_img;
 
 protected:
-	Danmaku(const CString& content, const Gdiplus::FontFamily* font, REAL size);
+	Danmaku(const CString& content, const Gdiplus::FontFamily* font, REAL size, COLORREF textColor, BOOL strokeEnabled, COLORREF strokeColor);
 public:
 	Danmaku(const Danmaku& other) = delete;
 	Danmaku(Danmaku&& other);
@@ -35,12 +35,19 @@ public:
 
 	// 弹幕字体
 	std::unique_ptr<Gdiplus::FontFamily> m_danmakuFont;
+	CString m_danmakuFontName = L"黑体";
 	// 弹幕字体大小
 	REAL m_danmakuSize = 40.0F;
 	// 弹幕滚动速度
 	int m_danmakuSpeed = 4;
 	// 弹幕不透明度
 	int m_danmakuAlpha = 255 * 80 / 100;
+	// 文字颜色
+	COLORREF m_textColor = RGB(255, 255, 255);
+	// 描边开关
+	BOOL m_strokeEnabled = TRUE;
+	// 描边颜色
+	COLORREF m_strokeColor = RGB(0, 0, 0);
 
 	// 更新弹幕线程
 	std::thread m_updateThread;

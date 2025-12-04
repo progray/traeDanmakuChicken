@@ -1,4 +1,4 @@
-﻿
+
 // DanmakuChickenDlg.h : 头文件
 //
 
@@ -41,10 +41,20 @@ public:
 	afx_msg void OnDestroy();
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnBnClickedButton2();
+	afx_msg void OnSelchangeComboFont();
+	afx_msg void OnBnClickedButtonTextColor();
+	afx_msg void OnBnClickedButtonStrokeColor();
+	afx_msg void OnBnClickedCheckStroke();
+
+	// 设置保存和加载
+	void SaveSettings();
+	void LoadSettings();
 
 	// 处理添加弹幕请求
 	void HandleAddDanmaku(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 
+	// 更新预览区域
+	void UpdatePreview();
 
 	COverlayDlg m_overlayDlg;
 	HttpServer m_server;
@@ -53,4 +63,22 @@ public:
 	CSliderCtrl m_danmakuSizeSlider;
 	CSliderCtrl m_danmakuSpeedSlider;
 	CSliderCtrl m_danmakuOpacitySlider;
+	
+	CTabCtrl m_tabControl;
+	CComboBox m_fontCombo;
+	CSliderCtrl m_fontSizeSlider;
+	CButton m_textColorButton;
+	CButton m_strokeCheck;
+	CButton m_strokeColorButton;
+	CSliderCtrl m_opacitySlider;
+	CStatic m_previewStatic;
+	
+	// 样式设置对话框
+	CDialog m_stylePage;
+	
+	// 系统字体列表
+	std::vector<CString> m_systemFonts;
+
+	// 字体枚举回调函数
+	static int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX* lpelfe, NEWTEXTMETRICEX* lpntme, DWORD FontType, LPARAM lParam);
 };
